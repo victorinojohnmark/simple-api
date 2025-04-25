@@ -3,15 +3,9 @@
 class Router {
     private static $routes = [];
     private static $currentGroup = null;
-    private static $csrfProtectedMethods = ['POST', 'PUT', 'PATCH', 'DELETE']; // Methods that require CSRF validation
 
     public static function add($method, $path, $handler, $middleware = []) {
         $method = strtoupper($method);
-
-        // Automatically add CsrfMiddleware for specific HTTP methods
-        if (in_array($method, self::$csrfProtectedMethods)) {
-            $middleware[] = CsrfMiddleware::class;
-        }
 
         // Apply group prefix and middleware unless excluded
         if (self::$currentGroup) {
@@ -61,23 +55,36 @@ class Router {
     }
 
     public static function resolve() {
-        $method = $_SERVER['REQUEST_METHOD'];
-        $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-
-        foreach (self::$routes as $route) {
-            if ($route['method'] === $method && $route['path'] === $uri) {
-                // Apply middleware before executing handler
-                foreach ($route['middleware'] as $middleware) {
-                    (new $middleware)->handle();
-                }
-                call_user_func($route['handler']);
-                return;
-            }
-        }
-
-        // Route does not exist → Send 404 response
-        http_response_code(404);
-        echo json_encode(['error' => '404 Not Found']);
-        exit;
-    }
+		$method = $_SERVER['REQUEST_METHOD'];
+		$uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+	
+		// Validate JSON payload for non-GET requests
+		if ($method !== 'GET') {
+			$rawInput = file_get_contents('php://input');
+			json_decode($rawInput, true);
+	
+			if (json_last_error() !== JSON_ERROR_NONE) {
+				http_response_code(400); // Bad Request
+				echo json_encode(['error' => 'Invalid request payload']);
+				exit;
+			}
+		}
+	
+		foreach (self::$routes as $route) {
+			if ($route['method'] === $method && $route['path'] === $uri) {
+				// Apply middleware before executing handler
+				foreach ($route['middleware'] as $middleware) {
+					(new $middleware)->handle();
+				}
+				call_user_func($route['handler']);
+				return;
+			}
+		}
+	
+		// Route does not exist → Send 404 response
+		http_response_code(404);
+		echo json_encode(['error' => '404 Not Found']);
+		exit;
+	}
+	
 }
