@@ -1,14 +1,13 @@
 <?php
-
 class AuthMiddleware {
     public function handle() {
-        // Check if the user is authenticated
-        if (!isset($_SESSION['user'])) {
+        error_log('AuthMiddleware triggered');
+
+        if (!isset($_SESSION['user_id'])) {
             http_response_code(401);
             echo json_encode(['error' => 'Unauthorized']);
-            return false; // Stop further execution
+            exit; // Ensure request halts immediately
         }
-
-        return true; // Proceed to the route
     }
 }
+
