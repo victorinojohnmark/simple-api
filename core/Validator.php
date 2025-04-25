@@ -239,6 +239,13 @@ class Validator
 			$this->addError($field, "The :attribute does not exist.");
 		}
 	}
+
+	protected function validateConfirm($field, $value, $param) {
+		// Check if the field to confirm is present in the data
+		if (!isset($this->data[$param]) || $value !== $this->data[$param]) {
+			$this->addError($field, "The :attribute must match {$param}.");
+		}
+	}
 	
     protected function validateFileType($field, $file, $param)
     {
