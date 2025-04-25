@@ -2,35 +2,49 @@
 
 class User {
     public static function create($data) {
-        // Extract fields from array
-        $username = $data['username'] ?? null;
-        $password = $data['password'] ?? null;
+		// Hash password before storing
+		$data['password'] = password_hash($data['password'], PASSWORD_BCRYPT);
+	
+		// Insert user into database
+		DB::query("INSERT INTO users (name, email, password, created_at) VALUES (:name, :email, :password, :created_at)", [
+			'name' => $data['name'],
+			'email' => $data['email'],
+			'password' => $data['password'],
 
-        if (!$username || !$password) {
-            throw new Exception("Username and password are required");
-        }
+			'created_at' => time(),
+		]);
 
-        // Hash password before storing
-        $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
+		$newUser = DB::query("SELECT id, name, email, created_at FROM users WHERE email = :email", [
+			'email' => $data['email']
+		])->fetch(PDO::FETCH_ASSOC);
+		
+		return $newUser;
+		
 
-        // Insert into database
-        return DB::query("INSERT INTO users (username, password) VALUES (:username, :password)", [
-            'username' => $username,
-            'password' => $hashedPassword
-        ]);
-    }
+
+	}
 
     public static function find($data) {
-        // Extract ID or username from array
-        $id = $data['id'] ?? null;
-        $username = $data['username'] ?? null;
-
-        if ($id) {
-            return DB::query("SELECT * FROM users WHERE id = :id", ['id' => $id])->fetch();
-        } elseif ($username) {
-            return DB::query("SELECT * FROM users WHERE username = :username", ['username' => $username])->fetch();
+        // Check for either ID or username
+        if (!isset($data['id']) && !isset($data['username'])) {
+            throw new Exception("Either 'id' or 'username' is required.");
         }
 
-        return null;
+        $query = "SELECT * FROM users WHERE ";
+        $params = [];
+
+        if (isset($data['id'])) {
+            $query .= "id = :id";
+            $params['id'] = $data['id'];
+        } elseif (isset($data['username'])) {
+            $query .= "username = :username";
+            $params['username'] = $data['username'];
+        }
+
+        $user = DB::query($query, $params)->fetch(PDO::FETCH_ASSOC);
+		unset($user['password']);
+		
+		return $user;
+
     }
 }

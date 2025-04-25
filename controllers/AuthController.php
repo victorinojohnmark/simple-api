@@ -2,19 +2,46 @@
 
 class AuthController {
     public function register() {
-        $data = $this->getRequestData();
-        try {
-            User::create($data);
-            echo json_encode(['message' => 'User registered successfully']);
-        } catch (Exception $e) {
-            http_response_code(400);
-            echo json_encode(['error' => $e->getMessage()]);
-        }
-    }
-
+		$data = $this->getRequestData();
+	
+		$rules = [
+			'name' => 'required|string|min:3|max:255',
+			'email' => 'required|email|unique:users,email',
+			'password' => 'required|string|min:6',
+			'password_confirmation' => 'required|string|confirm:password'
+		];
+	
+		$validator = new Validator($data, $rules, DB::connect());
+	
+		if (!$validator->passes()) {
+			http_response_code(422);
+			echo json_encode([
+				'success' => false,
+				'errors' => $validator->errors()
+			]);
+			return;
+		}
+	
+		$user = User::create($data);
+	
+		// Automatically log the user in by generating a new CSRF token
+		Csrf::generateToken(true);
+    	$newCsrfToken = $_SESSION['csrf_token'];
+		$_SESSION['user_id'] = $user['id'];
+	
+		echo json_encode([
+			'success' => true,
+			'message' => 'User registered successfully and logged in.',
+			'data' => [
+				'user' => $user,
+				'csrf_token' => $newCsrfToken // Include the generated token in the response
+			]
+		]);
+	}
+	
     public function login() {
         $data = $this->getRequestData();
-        $user = User::find(['username' => $data['username']]);
+        $user = User::find(['email' => $data['email']]);
 
         if (!$user || !password_verify($data['password'], $user['password'])) {
             http_response_code(401);
@@ -22,8 +49,26 @@ class AuthController {
             return;
         }
 
+		// Regenerate CSRF token on successful login
+		Csrf::generateToken(true);
+    	$newCsrfToken = $_SESSION['csrf_token'];
+
         $_SESSION['user_id'] = $user['id'];
-        echo json_encode(['message' => 'Login successful', 'user' => $user]);
+		http_response_code(200); // OK
+		echo json_encode([
+			'success' => true,
+			'message' => 'Login successful',
+			'data' => [
+				'user' => $user,
+				'csrf_token' => $newCsrfToken // Include the generated token in the response
+			]
+		]);
+    }
+
+	public function logout() {
+        // Destroy user session
+        session_destroy();
+        echo json_encode(['message' => 'Logged out successfully']);
     }
 
     public function getAuthenticatedUser() {
@@ -43,9 +88,5 @@ class AuthController {
     }
 
 
-	public function logout() {
-        // Destroy user session
-        session_destroy();
-        echo json_encode(['message' => 'Logged out successfully']);
-    }
+	
 }
