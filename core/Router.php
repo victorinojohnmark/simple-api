@@ -46,23 +46,25 @@ class Router {
         self::add('DELETE', $path, $handler, $middleware);
     }
 
-    public static function resolve() {
-        $method = $_SERVER['REQUEST_METHOD'];
-        $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-
-        foreach (self::$routes as $route) {
-            if ($route['method'] === $method && $route['path'] === $uri) {
-                // Apply middleware unless excluded
-                foreach ($route['middleware'] as $middleware) {
-                    (new $middleware)->handle();
-                }
-                call_user_func($route['handler']);
-                return;
-            }
-        }
-
-        // Return 404 if route is not found
-        http_response_code(404);
-        echo json_encode(['error' => 'Route not found']);
-    }
+	public static function resolve() {
+		$method = $_SERVER['REQUEST_METHOD'];
+		$uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+	
+		foreach (self::$routes as $route) {
+			if ($route['method'] === $method && $route['path'] === $uri) {
+				// Apply middleware before executing handler
+				foreach ($route['middleware'] as $middleware) {
+					(new $middleware)->handle();
+				}
+				call_user_func($route['handler']);
+				return;
+			}
+		}
+	
+		// Route does not exist → Send 404 response
+		http_response_code(404);
+		echo json_encode(['error' => 'Route not found']);
+		exit;
+	}
+	
 }
