@@ -1,9 +1,3 @@
-Absolutely! Here's a well-structured `README.md` file for your framework. It covers installation, configuration, and usage of key features, ensuring clarity for developers using the framework.
-
----
-
-### **README.md**
-```markdown
 # PHP Modular Framework
 
 ## Overview
@@ -63,7 +57,7 @@ Router::post('/pizza/create', function () {
 - **Login:** `POST /auth/login`
 - **Register:** `POST /auth/register`
 - **Logout:** `POST /auth/logout`
-- **Get user:** `GET /auth/me`
+- **Get user:** `GET /auth/user`
 
 ### **File Handling**
 The `File` class manages secure file uploads:
@@ -79,13 +73,13 @@ Middleware can be enforced for routes:
 Router::post('/pizza/create', function () {
     $controller = new PizzaController();
     $controller->createPizza();
-}, [CsrfMiddleware::class, AuthMiddleware::class]);
+}, [AuthMiddleware::class]);
 ```
 
 ## Running the Framework
 Start a local PHP server:
 ```bash
-php -S localhost:8000
+php -S localhost:8000 server.php
 ```
 Access the API:
 ```plaintext
@@ -97,8 +91,3 @@ Fork and submit pull requests to enhance functionality.
 
 ## License
 MIT License.
-```
-
----
-
-This README ensures that anyone using the framework can quickly set it up and use its features. Let me know if you’d like modifications or additional sections! 🚀
