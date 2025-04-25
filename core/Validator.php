@@ -125,105 +125,121 @@ class Validator
         }
     }
 
-    protected function validateUnique($field, $value, $param)
-    {
-        if (!$this->db) {
-            throw new Exception("DB handler required for unique validation.");
-        }
+    protected function validateUnique($field, $value, $param) {
+		if (!$this->db) {
+			throw new Exception("DB handler required for unique validation.");
+		}
+	
+		// Parse parameters
+		$parts = explode(',', $param);
+		$table = $parts[0] ?? null;
+		$column = $parts[1] ?? $field;
+	
+		if (!$table) {
+			throw new Exception("Table name is required for unique validation.");
+		}
+	
+		$excludeId = null;
+		$additionalConditions = [];
+	
+		foreach (array_slice($parts, 2) as $part) {
+			if (strpos($part, '=') !== false) {
+				list($key, $val) = explode('=', $part, 2);
+				$additionalConditions[$key] = $val;
+			} elseif (is_numeric($part)) {
+				$excludeId = $part;
+			}
+		}
+	
+		// Check if the 'deleted_at' column exists
+		$query = "SHOW COLUMNS FROM {$table} LIKE 'deleted_at'";
+		$stmt = $this->db->prepare($query);
+		$stmt->execute();
+		$deletedAtExists = $stmt->rowCount() > 0;
+	
+		// Build query dynamically
+		$query = "SELECT COUNT(*) FROM {$table} WHERE {$column} = :value";
+		$params = ['value' => $value];
+	
+		if ($excludeId) {
+			$query .= " AND id != :excludeId";
+			$params['excludeId'] = $excludeId;
+		}
+	
+		foreach ($additionalConditions as $key => $val) {
+			$query .= " AND {$key} = :{$key}";
+			$params[$key] = $val;
+		}
+	
+		// Only include 'deleted_at IS NULL' if the column exists
+		if ($deletedAtExists) {
+			$query .= " AND deleted_at IS NULL";
+		}
+	
+		// Execute query
+		$stmt = $this->db->prepare($query);
+		$stmt->execute($params);
+		$count = $stmt->fetchColumn();
+	
+		if ($count > 0) {
+			$this->addError($field, "The :attribute must be unique.");
+		}
+	}
 
-        // Parse parameters
-        $parts = explode(',', $param);
-        $table = $parts[0] ?? null;
-        $column = $parts[1] ?? $field;
-
-        if (!$table) {
-            throw new Exception("Table name is required for unique validation.");
-        }
-
-        $excludeId = null;
-        $additionalConditions = [];
-
-        foreach (array_slice($parts, 2) as $part) {
-            if (strpos($part, '=') !== false) {
-                list($key, $val) = explode('=', $part, 2);
-                $additionalConditions[$key] = $val;
-            } elseif (is_numeric($part)) {
-                $excludeId = $part;
-            }
-        }
-
-        // Build query dynamically
-        $query = "SELECT COUNT(*) FROM {$table} WHERE {$column} = :value";
-        $params = ['value' => $value];
-
-        if ($excludeId) {
-            $query .= " AND id != :excludeId";
-            $params['excludeId'] = $excludeId;
-        }
-
-        foreach ($additionalConditions as $key => $val) {
-            $query .= " AND {$key} = :{$key}";
-            $params[$key] = $val;
-        }
-
-        $query .= " AND deleted_at IS NULL"; // Exclude soft-deleted records
-
-        // Execute query
-        $stmt = $this->db->prepare($query);
-        $stmt->execute($params);
-        $count = $stmt->fetchColumn();
-
-        if ($count > 0) {
-            $this->addError($field, "The :attribute must be unique.");
-        }
-    }
-
-    protected function validateExists($field, $value, $param)
-    {
-        if (!$this->db) {
-            throw new Exception("DB handler required for exists validation.");
-        }
-
-        // Parse parameters
-        $parts = array_filter(array_map('trim', explode(',', $param)));
-        $table = $parts[0] ?? null;
-        $column = $parts[1] ?? $field;
-
-        if (!$table || !$column) {
-            $this->addError($field, "Invalid, the :attribute does not exist.");
-            return;
-        }
-
-        // Additional conditions
-        $conditions = [$column => $value];
-        for ($i = 2; $i < count($parts); $i++) {
-            if (strpos($parts[$i], '=') !== false) {
-                list($key, $val) = explode('=', $parts[$i], 2);
-                $conditions[$key] = $val;
-            }
-        }
-
-        // Build query dynamically
-        $query = "SELECT COUNT(*) FROM {$table} WHERE {$column} = :value";
-        $params = ['value' => $value];
-
-        foreach ($conditions as $key => $val) {
-            $query .= " AND {$key} = :{$key}";
-            $params[$key] = $val;
-        }
-
-        $query .= " AND deleted_at IS NULL"; // Exclude soft-deleted records
-
-        // Execute query
-        $stmt = $this->db->prepare($query);
-        $stmt->execute($params);
-        $count = $stmt->fetchColumn();
-
-        if ($count === 0) {
-            $this->addError($field, "The :attribute does not exist.");
-        }
-    }
-
+    protected function validateExists($field, $value, $param) {
+		if (!$this->db) {
+			throw new Exception("DB handler required for exists validation.");
+		}
+	
+		// Parse parameters
+		$parts = array_filter(array_map('trim', explode(',', $param)));
+		$table = $parts[0] ?? null;
+		$column = $parts[1] ?? $field;
+	
+		if (!$table || !$column) {
+			$this->addError($field, "Invalid, the :attribute does not exist.");
+			return;
+		}
+	
+		// Additional conditions
+		$conditions = [$column => $value];
+		for ($i = 2; $i < count($parts); $i++) {
+			if (strpos($parts[$i], '=') !== false) {
+				list($key, $val) = explode('=', $parts[$i], 2);
+				$conditions[$key] = $val;
+			}
+		}
+	
+		// Check if the 'deleted_at' column exists
+		$query = "SHOW COLUMNS FROM {$table} LIKE 'deleted_at'";
+		$stmt = $this->db->prepare($query);
+		$stmt->execute();
+		$deletedAtExists = $stmt->rowCount() > 0;
+	
+		// Build query dynamically
+		$query = "SELECT COUNT(*) FROM {$table} WHERE {$column} = :value";
+		$params = ['value' => $value];
+	
+		foreach ($conditions as $key => $val) {
+			$query .= " AND {$key} = :{$key}";
+			$params[$key] = $val;
+		}
+	
+		// Only include 'deleted_at IS NULL' if the column exists
+		if ($deletedAtExists) {
+			$query .= " AND deleted_at IS NULL";
+		}
+	
+		// Execute query
+		$stmt = $this->db->prepare($query);
+		$stmt->execute($params);
+		$count = $stmt->fetchColumn();
+	
+		if ($count === 0) {
+			$this->addError($field, "The :attribute does not exist.");
+		}
+	}
+	
     protected function validateFileType($field, $file, $param)
     {
         $allowedTypes = explode(',', $param);
