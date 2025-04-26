@@ -14,11 +14,11 @@ class AuthController {
 		$validator = new Validator($data, $rules, DB::connect());
 	
 		if (!$validator->passes()) {
-			http_response_code(422);
-			echo json_encode([
+
+			Response::json([
 				'success' => false,
 				'errors' => $validator->errors()
-			]);
+			], 422);
 			return;
 		}
 	
@@ -28,8 +28,8 @@ class AuthController {
 		Csrf::generateToken(true);
     	$newCsrfToken = $_SESSION['csrf_token'];
 		$_SESSION['user_id'] = $user['id'];
-	
-		echo json_encode([
+
+		Response::json([
 			'success' => true,
 			'message' => 'User registered successfully and logged in.',
 			'data' => [
@@ -40,20 +40,44 @@ class AuthController {
 	}
 	
     public function login() {
-        $data = $this->getRequestData();
-        $user = User::find(['email' => $data['email']]);
-
-        if (!$user || !password_verify($data['password'], $user['password'])) {
-            http_response_code(401);
-            echo json_encode(['error' => 'Invalid credentials']);
-            return;
-        }
-
+		$data = $this->getRequestData();
+	
+		// Check if user is already logged in
+		if (isset($_SESSION['user_id'])) {
+			$user = User::find(['id' => $_SESSION['user_id']]);
+	
+			if ($user) {
+				$csrfToken = $_SESSION['csrf_token']; // Retrieve existing CSRF token
+				
+				http_response_code(400); // Bad Request
+				header('Content-Type: application/json');
+				echo json_encode([
+					'error' => 'User already logged in',
+					'data' => [
+						'user' => $user,
+						'csrf_token' => $csrfToken
+					]
+				]);
+				return;
+			}
+		}
+	
+		// Proceed with the usual login process
+		$user = User::find(['email' => $data['email']], true);
+	
+		if (!$user || !password_verify($data['password'], $user['password'])) {
+			http_response_code(401); // Unauthorized
+			echo json_encode(['error' => 'Invalid credentials']);
+			return;
+		}
+	
 		// Regenerate CSRF token on successful login
 		Csrf::generateToken(true);
-    	$newCsrfToken = $_SESSION['csrf_token'];
-
-        $_SESSION['user_id'] = $user['id'];
+		$newCsrfToken = $_SESSION['csrf_token'];
+	
+		unset($user['password']); // Remove password from user data before sending it in the response
+	
+		$_SESSION['user_id'] = $user['id']; // Set user ID in session
 		http_response_code(200); // OK
 		echo json_encode([
 			'success' => true,
@@ -63,7 +87,7 @@ class AuthController {
 				'csrf_token' => $newCsrfToken // Include the generated token in the response
 			]
 		]);
-    }
+	}
 
 	public function logout() {
         // Destroy user session
@@ -74,6 +98,7 @@ class AuthController {
     public function getAuthenticatedUser() {
         if (isset($_SESSION['user_id'])) {
             $user = User::find(['id' => $_SESSION['user_id']]);
+
             echo json_encode(['user' => $user]);
         } else {
             http_response_code(401);

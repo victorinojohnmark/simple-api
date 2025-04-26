@@ -11,13 +11,6 @@ class CsrfMiddleware {
                 $rawInput = file_get_contents('php://input');
                 $jsonInput = json_decode($rawInput, true);
 
-                // Handle JSON parsing errors
-                // if (json_last_error() !== JSON_ERROR_NONE) {
-                //     http_response_code(400); // Bad Request
-                //     echo json_encode(['error' => 'Invalid request payload']);
-                //     exit;
-                // }
-
                 $token = $jsonInput['csrf_token'] ?? null;
             }
 
