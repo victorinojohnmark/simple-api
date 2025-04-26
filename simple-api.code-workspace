@@ -1,0 +1,10 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"php.validate.executablePath": "D:/Laragon/bin/php/php-7.0.33-Win32-VC14-x64/php.exe"
+	}
+}
