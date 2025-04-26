@@ -66,8 +66,11 @@ class Router {
 			json_decode($rawInput, true);
 	
 			if (json_last_error() !== JSON_ERROR_NONE) {
-				http_response_code(400); // Bad Request
-				echo json_encode(['error' => 'Invalid request payload']);
+                // Invalid JSON payload → Send 400 response
+                Response::json([
+                    'error' => 'Invalid request payload',
+                ], 400);
+
 				exit;
 			}
 		}
@@ -84,8 +87,10 @@ class Router {
 		}
 	
 		// Route does not exist → Send 404 response
-		http_response_code(404);
-		echo json_encode(['error' => '404 Not Found']);
+        Response::json([
+            'error' => '404 Not Found',
+        ], 404);
+        
 		exit;
 	}
 	

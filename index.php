@@ -37,10 +37,11 @@ set_error_handler(function ($severity, $message, $file, $line) {
     exit();
 });
 
-// Run the App
 try {
     App::run();
 } catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['error' => $e->getMessage()]);
+    Response::json([
+        'error' => 'An error occurred while processing your request.',
+        'details' => $e->getMessage()
+    ], 500);
 }

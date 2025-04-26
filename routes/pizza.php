@@ -1,7 +1,9 @@
 <?php
 
 Router::get('/', function () {
-    echo json_encode(['message' => 'Yey, Pizza API is working!']);
+    Response::json([
+        'message' => 'Yey, Pizza API is working!',
+    ]);
 });
 
 Router::get('/pizza', function () {

@@ -16,8 +16,10 @@ class CsrfMiddleware {
 
             // Validate CSRF token
             if (!$token || !Csrf::validateToken($token)) {
-                http_response_code(403); // Forbidden
-                echo json_encode(['error' => 'Invalid CSRF token']);
+                // Invalid CSRF token, return error response
+                Response::json([
+                    'error' => 'Invalid CSRF token',
+                ], 403);
                 exit;
             }
         }

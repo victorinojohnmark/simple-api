@@ -48,16 +48,15 @@ class AuthController {
 	
 			if ($user) {
 				$csrfToken = $_SESSION['csrf_token']; // Retrieve existing CSRF token
-				
-				http_response_code(400); // Bad Request
-				header('Content-Type: application/json');
-				echo json_encode([
-					'error' => 'User already logged in',
+
+				Response::json([
+					'success' => false,
+					'message' => 'User already logged in',
 					'data' => [
 						'user' => $user,
-						'csrf_token' => $csrfToken
+						'csrf_token' => $csrfToken // Include the existing token in the response
 					]
-				]);
+				], 400);
 				return;
 			}
 		}
@@ -66,8 +65,10 @@ class AuthController {
 		$user = User::find(['email' => $data['email']], true);
 	
 		if (!$user || !password_verify($data['password'], $user['password'])) {
-			http_response_code(401); // Unauthorized
-			echo json_encode(['error' => 'Invalid credentials']);
+			Response::json([
+				'success' => false,
+				'message' => 'Invalid credentials'
+			], 401);
 			return;
 		}
 	
@@ -78,8 +79,8 @@ class AuthController {
 		unset($user['password']); // Remove password from user data before sending it in the response
 	
 		$_SESSION['user_id'] = $user['id']; // Set user ID in session
-		http_response_code(200); // OK
-		echo json_encode([
+
+		Response::json([
 			'success' => true,
 			'message' => 'Login successful',
 			'data' => [
@@ -92,17 +93,28 @@ class AuthController {
 	public function logout() {
         // Destroy user session
         session_destroy();
-        echo json_encode(['message' => 'Logged out successfully']);
+
+		Response::json([
+			'success' => true,
+			'message' => 'Logged out successfully'
+		]);
     }
 
     public function getAuthenticatedUser() {
         if (isset($_SESSION['user_id'])) {
             $user = User::find(['id' => $_SESSION['user_id']]);
 
-            echo json_encode(['user' => $user]);
+			Response::json([
+				'data' => [
+					'user' => $user
+				]
+			]);
         } else {
-            http_response_code(401);
-            echo json_encode(['error' => 'User not authenticated']);
+			Response::json([
+				'success' => false,
+				'message' => 'User not authenticated'
+			], 401);
+
         }
     }
 

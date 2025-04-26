@@ -3,7 +3,9 @@
 class PizzaController {
     public function listPizzas() {
         $pizzas = Pizza::getAll(); // Use model to fetch all pizzas
-        echo json_encode($pizzas);
+        Response::json([
+            'data' => $pizzas,
+        ]);
     }
 
     public function createPizza() {
@@ -23,15 +25,20 @@ class PizzaController {
                 $data['image_path'] = $uploadedFilePath; // Save the file path in the data array
             } else {
                 // Handle file upload error
-                http_response_code(500);
-                echo json_encode(['error' => 'Failed to upload file']);
+                Response::json([
+                    'error' => 'Failed to upload file',
+                ], 500);
                 return;
             }
         }
 
         // Save to database via model
         Pizza::create($data); // Pass the full data array to the model
-        echo json_encode(['message' => 'Pizza created', 'data' => $data]);
+        Response::json([
+            'success' => true,
+            'message' => 'Pizza created',
+            'data' => $data,
+        ]);
     }
 
     public function deletePizza($pizzaId) {
@@ -48,6 +55,10 @@ class PizzaController {
         // Delete the pizza record from the database
         Pizza::delete($pizzaId);
 
-        echo json_encode(['message' => 'Pizza deleted']);
+        Response::json([
+            'success' => true,
+            'message' => 'Pizza deleted',
+        ]);
+
     }
 }

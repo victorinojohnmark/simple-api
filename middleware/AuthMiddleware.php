@@ -4,8 +4,7 @@ class AuthMiddleware {
         error_log('AuthMiddleware triggered');
 
         if (!isset($_SESSION['user_id'])) {
-            http_response_code(401);
-            echo json_encode(['error' => 'Unauthorized']);
+            Response::json(['error' => 'Unauthorized'], 401); // Send JSON response
             exit; // Ensure request halts immediately
         }
     }

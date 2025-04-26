@@ -1,7 +1,9 @@
 <?php
 
 Router::get('/csrf-token', function () {
-    echo json_encode(['csrf_token' => Csrf::getToken()]);
+    Response::json([
+        'csrf_token' => Csrf::getToken()
+    ]);
 });
 
 Router::group('/auth', [AuthMiddleware::class], function () {
