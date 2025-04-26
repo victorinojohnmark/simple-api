@@ -10,7 +10,7 @@ Router::group('/auth', [AuthMiddleware::class], function () {
     Router::post('/login', function () {
         $controller = new AuthController();
         $controller->login();
-    });
+    }, [RateLimitter::class]);
 
     Router::post('/register', function () {
         $controller = new AuthController();
