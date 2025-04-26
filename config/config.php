@@ -1,9 +1,9 @@
 <?php
 
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'pizza_db');
-define('DB_USER', 'root');
-define('DB_PASS', 'P@ssw0rd');
+define('DB_HOST', getenv('DB_HOST'));
+define('DB_NAME', getenv('DB_NAME'));
+define('DB_USER', getenv('DB_USER'));
+define('DB_PASS', getenv('DB_PASS'));
 
 // Define the upload directory
-define('UPLOAD_DIR', __DIR__ . '/../uploads/');
+define('UPLOAD_DIR', getenv('UPLOAD_DIR') ?: __DIR__ . '/../uploads/');
