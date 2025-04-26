@@ -24,4 +24,4 @@ Router::group('/auth', [AuthMiddleware::class], function () {
         $controller = new AuthController();
         $controller->getAuthenticatedUser();
     });
-}, ['/register']);
+}, ['/register','/login']);
