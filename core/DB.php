@@ -12,9 +12,26 @@ class DB {
         return self::$pdo;
     }
 
+    public static function testConnection() {
+        try {
+            self::connect();
+        } catch (PDOException $e) {
+
+            Response::json([
+                'status' => 'error',
+                'message' => 'Failed to connect to the database.',
+                'details' => $e->getMessage()
+            ]);
+            exit; // Stop execution if the test fails
+        }
+    }
+
+
     public static function query($query, $params = []) {
         $stmt = self::connect()->prepare($query);
         $stmt->execute($params);
         return $stmt;
     }
 }
+
+
