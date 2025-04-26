@@ -1,6 +1,6 @@
 <?php
 
-class User {
+class UserModel {
     public static function create($data) {
 		// Hash password before storing
 		$data['password'] = password_hash($data['password'], PASSWORD_BCRYPT);

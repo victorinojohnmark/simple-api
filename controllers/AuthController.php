@@ -22,7 +22,7 @@ class AuthController {
 			return;
 		}
 	
-		$user = User::create($data);
+		$user = UserModel::create($data);
 	
 		// Automatically log the user in by generating a new CSRF token
 		Csrf::generateToken(true);
@@ -44,7 +44,7 @@ class AuthController {
 	
 		// Check if user is already logged in
 		if (isset($_SESSION['user_id'])) {
-			$user = User::find(['id' => $_SESSION['user_id']]);
+			$user = UserModel::find(['id' => $_SESSION['user_id']]);
 	
 			if ($user) {
 				$csrfToken = $_SESSION['csrf_token']; // Retrieve existing CSRF token
@@ -62,7 +62,7 @@ class AuthController {
 		}
 	
 		// Proceed with the usual login process
-		$user = User::find(['email' => $data['email']], true);
+		$user = UserModel::find(['email' => $data['email']], true);
 	
 		if (!$user || !password_verify($data['password'], $user['password'])) {
 			Response::json([
@@ -102,7 +102,7 @@ class AuthController {
 
     public function getAuthenticatedUser() {
         if (isset($_SESSION['user_id'])) {
-            $user = User::find(['id' => $_SESSION['user_id']]);
+            $user = UserModel::find(['id' => $_SESSION['user_id']]);
 
 			Response::json([
 				'data' => [

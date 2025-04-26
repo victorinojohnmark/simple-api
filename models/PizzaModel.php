@@ -1,6 +1,6 @@
 <?php
 
-class Pizza {
+class PizzaModel {
     public static function getAll() {
         return DB::query("SELECT * FROM pizzas")->fetchAll();
     }

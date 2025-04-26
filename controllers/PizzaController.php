@@ -2,7 +2,7 @@
 
 class PizzaController {
     public function listPizzas() {
-        $pizzas = Pizza::getAll(); // Use model to fetch all pizzas
+        $pizzas = PizzaModel::getAll(); // Use model to fetch all pizzas
         Response::json([
             'data' => $pizzas,
         ]);
@@ -33,7 +33,7 @@ class PizzaController {
         }
 
         // Save to database via model
-        Pizza::create($data); // Pass the full data array to the model
+        PizzaModel::create($data); // Pass the full data array to the model
         Response::json([
             'success' => true,
             'message' => 'Pizza created',
@@ -43,7 +43,7 @@ class PizzaController {
 
     public function deletePizza($pizzaId) {
         // Fetch the pizza record from the database
-        $pizza = Pizza::find($pizzaId);
+        $pizza = PizzaModel::find($pizzaId);
 
         if ($pizza && !empty($pizza['image_path'])) {
             $fileHandler = new File(UPLOAD_DIR);
@@ -53,7 +53,7 @@ class PizzaController {
         }
 
         // Delete the pizza record from the database
-        Pizza::delete($pizzaId);
+        PizzaModel::delete($pizzaId);
 
         Response::json([
             'success' => true,
