@@ -24,10 +24,10 @@ class User {
 
 	}
 
-    public static function find($data) {
+    public static function find($data, $withPassword = false) {
         // Check for either ID or username
-        if (!isset($data['id']) && !isset($data['username'])) {
-            throw new Exception("Either 'id' or 'username' is required.");
+        if (!isset($data['id']) && !isset($data['email'])) {
+            throw new Exception("Either 'id' or 'email' is required.");
         }
 
         $query = "SELECT * FROM users WHERE ";
@@ -36,13 +36,15 @@ class User {
         if (isset($data['id'])) {
             $query .= "id = :id";
             $params['id'] = $data['id'];
-        } elseif (isset($data['username'])) {
-            $query .= "username = :username";
-            $params['username'] = $data['username'];
+        } elseif (isset($data['email'])) {
+            $query .= "email = :email";
+            $params['email'] = $data['email'];
         }
 
         $user = DB::query($query, $params)->fetch(PDO::FETCH_ASSOC);
-		unset($user['password']);
+        if(!$withPassword) {
+            unset($user['password']); // Remove password from user data before sending it in the response
+        }
 		
 		return $user;
 
