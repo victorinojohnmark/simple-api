@@ -1,7 +1,9 @@
 <?php
 require_once __DIR__ . '/core/App.php';
 
-error_log('Index file loaded');
+require_once __DIR__ . '/helpers/loadEnv.php';
+loadEnv(__DIR__ . '/.env');
+validateEnv();
 
 // Dynamically load all controllers, models, and routes
 function autoloadFiles($directory) {
@@ -13,6 +15,9 @@ function autoloadFiles($directory) {
 // Load core files
 autoloadFiles(__DIR__ . '/core');
 
+// Perform initial database connection test
+DB::testConnection();
+
 // Dynamically load middleware files
 autoloadFiles(__DIR__ . '/middleware');
 
@@ -21,27 +26,6 @@ autoloadFiles(__DIR__ . '/controllers');
 autoloadFiles(__DIR__ . '/models');
 autoloadFiles(__DIR__ . '/routes');
 
-// Set a custom error handler to manage errors gracefully
-set_error_handler(function ($severity, $message, $file, $line) {
-    if (!(error_reporting() & $severity)) {
-        return;
-    }
+require_once __DIR__ . '/helpers/errorHandler.php';
 
-    $data = [
-        'message' => $message,
-        'file' => $file,
-        'line' => $line
-    ];
-
-    Response::json($data, 500);
-    exit();
-});
-
-try {
-    App::run();
-} catch (Exception $e) {
-    Response::json([
-        'error' => 'An error occurred while processing your request.',
-        'details' => $e->getMessage()
-    ], 500);
-}
+App::run();
