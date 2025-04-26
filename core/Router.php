@@ -24,12 +24,14 @@ class Router {
         self::$currentGroup = [
             'prefix' => $prefix,
             'middleware' => $middleware,
-            'excluded_routes' => array_map(fn($route) => $prefix . $route, $excluded_routes)
+            'excluded_routes' => array_map(function ($route) use ($prefix) {
+                return $prefix . $route;
+            }, $excluded_routes)
         ];
-
+    
         // Execute callback to register routes within group
         $callback();
-
+    
         // Reset group after execution
         self::$currentGroup = null;
     }
