@@ -1,66 +1,38 @@
 <?php
+class PizzaModel extends Model {
+    protected static $tableName = 'pizzas';
 
-class PizzaModel {
-    public static function getAll() {
-        return DB::query("SELECT * FROM pizzas")->fetchAll();
+    protected static $casts = [
+        'id' => 'int',
+        'price' => 'float',
+        'created_at' => 'int',
+    ];
+
+    public static function findById($id) {
+        return self::fetchRecord("SELECT * FROM pizzas WHERE id = :id", ['id' => $id]);
     }
 
-    public static function create($data) {
-        $db = DB::connect(); // Get the PDO instance
-
-        try {
-            $db->beginTransaction(); // Start the transaction
-
-            // Extract fields from the data array
-            $name = $data['name'] ?? null;
-            $imagePath = $data['image_path'] ?? null;
-
-            // Insert the pizza into the database
-            $stmt = $db->prepare("INSERT INTO pizzas (name, image_path) VALUES (:name, :image_path)");
-            $stmt->execute(['name' => $name, 'image_path' => $imagePath]);
-
-            $pizzaId = $db->lastInsertId(); // Get the ID of the newly created pizza
-
-            // (Optional) Perform additional operations here if needed
-            // e.g., logging the creation of the pizza in another table
-
-            $db->commit(); // Commit the transaction
-            return $pizzaId;
-
-        } catch (Exception $e) {
-            $db->rollBack(); // Rollback the transaction on failure
-            throw new Exception("Failed to create pizza: " . $e->getMessage());
-        }
+    public static function listPizzas() {
+        return self::fetchList("SELECT * FROM pizzas ORDER BY created_at DESC");
     }
 
-    public static function find($id) {
-        return DB::query("SELECT * FROM pizzas WHERE id = :id", ['id' => $id])->fetch();
+    public static function createPizza(array $data) {
+        $filteredData = [
+            'name' => $data['name'],
+            'price' => $data['price'],
+            'description' => $data['description'],
+            'created_at' => $data['created_at'],
+            'created_by' => $data['created_by'],
+        ];
+        return self::create("INSERT INTO pizzas (name, price, description, created_at, created_by) VALUES (:name, :price, :description, :created_at, :created_by)", $filteredData);
     }
 
-    public static function delete($id) {
-        $db = DB::connect(); // Get the PDO instance
+    public static function updatePizza($id, array $data) {
+        $data['id'] = $id; // Add ID to params
+        return self::update("UPDATE pizzas SET name = :name, price = :price, description = :description WHERE id = :id", $data);
+    }
 
-        try {
-            $db->beginTransaction(); // Start the transaction
-
-            // Find the pizza record
-            $pizza = self::find($id);
-
-            if ($pizza && !empty($pizza['image_path'])) {
-                // Delete the associated image file
-                $fileHandler = new File(UPLOAD_DIR);
-                $fileHandler->delete($pizza['image_path']);
-            }
-
-            // Delete the pizza record from the database
-            $stmt = $db->prepare("DELETE FROM pizzas WHERE id = :id");
-            $stmt->execute(['id' => $id]);
-
-            $db->commit(); // Commit the transaction
-
-        } catch (Exception $e) {
-            $db->rollBack(); // Rollback the transaction on failure
-            throw new Exception("Failed to delete pizza: " . $e->getMessage());
-        }
+    public static function deletePizza($id) {
+        return self::delete("DELETE FROM pizzas WHERE id = :id", ['id' => $id]);
     }
 }

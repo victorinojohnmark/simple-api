@@ -10,5 +10,6 @@ class App {
         session_start();
         Csrf::generateToken();
         Router::resolve();
+        DB::testConnection();
     }
 }

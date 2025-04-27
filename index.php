@@ -15,9 +15,6 @@ function autoloadFiles($directory) {
 // Load core files
 autoloadFiles(__DIR__ . '/core');
 
-// Perform initial database connection test
-DB::testConnection();
-
 // Dynamically load middleware files
 autoloadFiles(__DIR__ . '/middleware');
 

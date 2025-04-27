@@ -1,64 +1,143 @@
 <?php
 
-class PizzaController {
+class PizzaController extends Controller {
+
+    public function __construct() {
+        parent::__construct();
+    }
+
     public function listPizzas() {
-        $pizzas = PizzaModel::getAll(); // Use model to fetch all pizzas
+        $pizzas = PizzaModel::listPizzas(); // Use model to fetch all pizzas
         Response::json([
             'data' => $pizzas,
         ]);
     }
 
-    public function createPizza() {
-        // Handle text input (JSON or form data)
-        $data = isset($_SERVER['CONTENT_TYPE']) && strpos($_SERVER['CONTENT_TYPE'], 'application/json') !== false
-            ? json_decode(file_get_contents('php://input'), true)
-            : $_POST;
-
-        // Initialize File handler
-        $fileHandler = new File(UPLOAD_DIR); // Use the directory from config.php
-
-        // Handle file upload
-        if (isset($_FILES['image'])) {
-            $uploadedFilePath = $fileHandler->upload($_FILES['image'], 'image');
-
-            if ($uploadedFilePath) {
-                $data['image_path'] = $uploadedFilePath; // Save the file path in the data array
-            } else {
-                // Handle file upload error
+    public function getPizza($pizzaId)
+    {
+        if ($pizzaId) {
+            $pizza = PizzaModel::findById($pizzaId); // Use model to fetch pizza by ID
+            if ($pizza) {
                 Response::json([
-                    'error' => 'Failed to upload file',
-                ], 500);
-                return;
+                    'data' => $pizza,
+                ]);
+            } else {
+                Response::json([
+                    'error' => 'Pizza not found',
+                ], 404);
             }
+        } else {
+            Response::json([
+                'error' => 'Pizza ID is required',
+            ], 400);
+        }
+    }
+
+    public function createPizza() {
+        $data = $this->requestData;
+
+        // // Initialize File handler
+        // $fileHandler = new File(UPLOAD_DIR); // Use the directory from config.php
+
+        // // Handle file upload
+        // if (isset($_FILES['image'])) {
+        //     $uploadedFilePath = $fileHandler->upload($_FILES['image'], 'image');
+
+        //     if ($uploadedFilePath) {
+        //         $data['image_path'] = $uploadedFilePath; // Save the file path in the data array
+        //     } else {
+        //         // Handle file upload error
+        //         Response::json([
+        //             'error' => 'Failed to upload file',
+        //         ], 500);
+        //         return;
+        //     }
+        // }
+
+        // validate
+        $validator = new Validator($data, [
+            'name' => 'required|string|max:255|unique:pizzas,name',
+            'description' => 'string|max:1000',
+            'price' => 'required|numeric|min:0',
+        ]);
+
+        $data['created_at'] = time();
+        $data['created_by'] = $_SESSION['user_id'];
+
+        if($validator->passes()) {
+            $pizza = PizzaModel::createPizza($data);
+            Response::json([
+                'success' => true,
+                'message' => 'Pizza created',
+                'data' => $pizza,
+            ]);
+        } else {
+            Response::json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 422);
+            return;
         }
 
-        // Save to database via model
-        PizzaModel::create($data); // Pass the full data array to the model
-        Response::json([
-            'success' => true,
-            'message' => 'Pizza created',
-            'data' => $data,
-        ]);
+       
+    }
+
+    public function updatePizza($pizzaId) {
+        $data = $this->requestData;
+
+        $pizza = PizzaModel::findById($pizzaId);
+
+        if($pizza) {
+            // validate
+            $validator = new Validator($data, [
+                'name' => 'required|string|max:255|unique:pizzas,name,' . $pizza['id'],
+                'description' => 'string|max:1000',
+                'price' => 'required|numeric|min:0',
+            ]);
+
+            if($validator->passes()) {
+                // Update the pizza record in the database
+                $pizza = PizzaModel::updatePizza($pizza['id'], $data);
+
+                Response::json([
+                    'success' => true,
+                    'message' => 'Pizza updated',
+                    'data' => $pizza,
+                ]);
+            } else {
+                Response::json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()
+                ], 422);
+                return;
+            }
+        } else {
+            Response::json([
+                'success' => false,
+                'error' => 'Pizza not found',
+            ], 404);
+        }
+        
     }
 
     public function deletePizza($pizzaId) {
-        // Fetch the pizza record from the database
-        $pizza = PizzaModel::find($pizzaId);
+        $pizza = PizzaModel::findById($pizzaId);
 
-        if ($pizza && !empty($pizza['image_path'])) {
-            $fileHandler = new File(UPLOAD_DIR);
+        if($pizza) {
+            PizzaModel::deletePizza($pizza['id']);
 
-            // Delete the associated file
-            $fileHandler->delete($pizza['image_path']);
+            Response::json([
+                'success' => true,
+                'message' => 'Pizza deleted',
+            ]);
+        } else {
+            Response::json([
+                'success' => false,
+                'error' => 'Pizza not found',
+            ], 404);
         }
-
-        // Delete the pizza record from the database
-        PizzaModel::delete($pizzaId);
-
-        Response::json([
-            'success' => true,
-            'message' => 'Pizza deleted',
-        ]);
-
+        
     }
 }
