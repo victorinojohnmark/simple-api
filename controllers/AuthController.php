@@ -1,8 +1,13 @@
 <?php
 
-class AuthController {
+class AuthController extends Controller {
+
+	public function __construct() {
+		parent::__construct();
+	}
+
     public function register() {
-		$data = $this->getRequestData();
+		$data = $this->requestData;
 	
 		$rules = [
 			'name' => 'required|string|min:3|max:255',
@@ -22,7 +27,8 @@ class AuthController {
 			return;
 		}
 	
-		$user = UserModel::create($data);
+		$data['created_at'] = time();
+		$user = UserModel::createUser($data);
 	
 		// Automatically log the user in by generating a new CSRF token
 		Csrf::generateToken(true);
@@ -40,7 +46,7 @@ class AuthController {
 	}
 	
     public function login() {
-		$data = $this->getRequestData();
+		$data = $this->requestData;
 	
 		// Check if user is already logged in
 		if (isset($_SESSION['user_id'])) {
@@ -111,19 +117,10 @@ class AuthController {
 			]);
         } else {
 			Response::json([
-				'success' => false,
 				'message' => 'User not authenticated'
 			], 401);
 
         }
     }
 
-    private function getRequestData() {
-        return isset($_SERVER['CONTENT_TYPE']) && strpos($_SERVER['CONTENT_TYPE'], 'application/json') !== false
-            ? json_decode(file_get_contents('php://input'), true)
-            : $_POST;
-    }
-
-
-	
 }
