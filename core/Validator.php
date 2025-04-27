@@ -4,16 +4,22 @@ class Validator
 {
     protected $data;
     protected $rules;
-    public $errors = [];
+    protected $errors = [];
     protected $pdo;
-    private $db;
+    protected $db;
     protected $customFieldNames = [];
+    protected static $deletedAtCache = [];
 
-    public function __construct(array $data, array $rules, $db = null)
-    {
-        $this->data  = $data;
+    public function __construct(array $data, array $rules) {
+        $this->data = $data;
         $this->rules = $rules;
-        $this->db    = $db;
+
+        // Initialize the static database connection if not already set
+        if (!$this->db) {
+            $this->db = DB::connect();
+        }
+
+        $this->pdo = $this->db;
     }
 
     public function passes()
@@ -151,12 +157,6 @@ class Validator
 			}
 		}
 	
-		// Check if the 'deleted_at' column exists
-		$query = "SHOW COLUMNS FROM {$table} LIKE 'deleted_at'";
-		$stmt = $this->db->prepare($query);
-		$stmt->execute();
-		$deletedAtExists = $stmt->rowCount() > 0;
-	
 		// Build query dynamically
 		$query = "SELECT COUNT(*) FROM {$table} WHERE {$column} = :value";
 		$params = ['value' => $value];
@@ -171,10 +171,9 @@ class Validator
 			$params[$key] = $val;
 		}
 	
-		// Only include 'deleted_at IS NULL' if the column exists
-		if ($deletedAtExists) {
-			$query .= " AND deleted_at IS NULL";
-		}
+		if ($this->hasDeletedAtColumn($table)) {
+            $query .= " AND deleted_at IS NULL";
+        }        
 	
 		// Execute query
 		$stmt = $this->db->prepare($query);
@@ -197,7 +196,7 @@ class Validator
 		$column = $parts[1] ?? $field;
 	
 		if (!$table || !$column) {
-			$this->addError($field, "Invalid, the :attribute does not exist.");
+			$this->addError($field, "Invalid parameters for exists validation.");
 			return;
 		}
 	
@@ -210,12 +209,6 @@ class Validator
 			}
 		}
 	
-		// Check if the 'deleted_at' column exists
-		$query = "SHOW COLUMNS FROM {$table} LIKE 'deleted_at'";
-		$stmt = $this->db->prepare($query);
-		$stmt->execute();
-		$deletedAtExists = $stmt->rowCount() > 0;
-	
 		// Build query dynamically
 		$query = "SELECT COUNT(*) FROM {$table} WHERE {$column} = :value";
 		$params = ['value' => $value];
@@ -225,10 +218,9 @@ class Validator
 			$params[$key] = $val;
 		}
 	
-		// Only include 'deleted_at IS NULL' if the column exists
-		if ($deletedAtExists) {
-			$query .= " AND deleted_at IS NULL";
-		}
+		if ($this->hasDeletedAtColumn($table)) {
+            $query .= " AND deleted_at IS NULL";
+        }
 	
 		// Execute query
 		$stmt = $this->db->prepare($query);
@@ -271,4 +263,14 @@ class Validator
         $message = str_replace(":attribute", $displayName, $message);
         $this->errors[$field][] = $message;
     }
+
+    protected function hasDeletedAtColumn($table) {
+        if (!isset(self::$deletedAtCache[$table])) {
+            $query = "SHOW COLUMNS FROM {$table} LIKE 'deleted_at'";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute();
+            self::$deletedAtCache[$table] = $stmt->rowCount() > 0;
+        }
+        return self::$deletedAtCache[$table];
+    }    
 }
