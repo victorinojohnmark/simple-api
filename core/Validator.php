@@ -8,6 +8,7 @@ class Validator
     protected $pdo;
     protected $db;
     protected $customFieldNames = [];
+    protected $customMessages = [];
     protected static $deletedAtCache = [];
 
     public function __construct(array $data, array $rules) {
@@ -26,29 +27,47 @@ class Validator
     {
         foreach ($this->rules as $field => $rulesString) {
             $rules = explode('|', $rulesString);
-            $value = $this->data[$field] ?? null;
 
-            if (isset($_FILES[$field])) {
-                // Handle file validation
-                $value = $_FILES[$field];
-            }
+            // Handle wildcard array validation (e.g., "products.*.name")
+            if (strpos($field, '.*') !== false) {
+                $baseField = explode('.*', $field)[0];
 
-            foreach ($rules as $rule) {
-                $ruleName = $rule;
-                $param = null;
+                if (isset($this->data[$baseField]) && is_array($this->data[$baseField])) {
+                    foreach ($this->data[$baseField] as $index => $item) {
 
-                if (strpos($rule, ':') !== false) {
-                    list($ruleName, $param) = explode(':', $rule, 2);
+                        // Validate each nested field
+                        $nestedField = str_replace('.*', "[{$index}]", $field);
+                        $value = $item[explode('.', $field)[1]] ?? null;
+
+                        foreach ($rules as $rule) {
+                            $this->applyRule($nestedField, $value, $rule);
+                        }
+                    }
                 }
-
-                $method = 'validate' . ucfirst($ruleName);
-                if (method_exists($this, $method)) {
-                    $this->$method($field, $value, $param);
+            } else {
+                $value = $this->data[$field] ?? null;
+                foreach ($rules as $rule) {
+                    $this->applyRule($field, $value, $rule);
                 }
             }
         }
 
         return empty($this->errors);
+    }
+
+    protected function applyRule($field, $value, $rule)
+    {
+        $ruleName = $rule;
+        $param = null;
+
+        if (strpos($rule, ':') !== false) {
+            list($ruleName, $param) = explode(':', $rule, 2);
+        }
+
+        $method = 'validate' . ucfirst($ruleName);
+        if (method_exists($this, $method)) {
+            $this->$method($field, $value, $param);
+        }
     }
 
     public function errors()
@@ -61,73 +80,87 @@ class Validator
         $this->customFieldNames = $customFieldNames;
     }
 
+    public function setCustomMessages(array $messages)
+    {
+        foreach ($messages as $key => $message) {
+            // Separate field and rule if specified as 'field.rule'
+            if (strpos($key, '.') !== false) {
+                list($field, $rule) = explode('.', $key, 2);
+                $this->customMessages[$field][$rule] = $message;
+            } else {
+                // Global rule message
+                $this->customMessages[$key] = $message;
+            }
+        }
+    }
+
     protected function validateRequired($field, $value, $param)
     {
         if (is_array($value) && isset($value['error']) && $value['error'] === UPLOAD_ERR_NO_FILE) {
             $this->addError($field, "The :attribute field is required.");
         } elseif (is_null($value) || trim($value) === '') {
-            $this->addError($field, "The :attribute field is required.");
+            $this->addError($field, "The :attribute field is required.", "required");
         }
     }
 
     protected function validateEmail($field, $value, $param)
     {
         if (!filter_var($value, FILTER_VALIDATE_EMAIL)) {
-            $this->addError($field, "The :attribute must be a valid email address.");
+            $this->addError($field, "The :attribute must be a valid email address.", "email");
         }
     }
 
     protected function validateMin($field, $value, $param)
     {
         if (strlen($value) < (int)$param) {
-            $this->addError($field, "The :attribute must be at least $param characters.");
+            $this->addError($field, "The :attribute must be at least $param characters.", "min");
         }
     }
 
     protected function validateMax($field, $value, $param)
     {
         if (strlen($value) > (int)$param) {
-            $this->addError($field, "The :attribute may not be greater than $param characters.");
+            $this->addError($field, "The :attribute may not be greater than $param characters.", "max");
         }
     }
 
     protected function validateSame($field, $value, $param)
     {
         if (!isset($this->data[$param]) || $value !== $this->data[$param]) {
-            $this->addError($field, "The :attribute must match $param.");
+            $this->addError($field, "The :attribute must match $param.", "same");
         }
     }
 
     protected function validateNumeric($field, $value, $param)
     {
         if (!is_numeric($value)) {
-            $this->addError($field, "The :attribute must be numeric.");
+            $this->addError($field, "The :attribute must be numeric.", "numeric");
         }
     }
 
     protected function validateInteger($field, $value, $param)
     {
         if (filter_var($value, FILTER_VALIDATE_INT) === false) {
-            $this->addError($field, "The :attribute must be an integer.");
+            $this->addError($field, "The :attribute must be an integer.", "integer");
         }
     }
 
     protected function validateDate($field, $value, $param)
     {
         if (!strtotime($value)) {
-            $this->addError($field, "The :attribute is not a valid date.");
+            $this->addError($field, "The :attribute is not a valid date.", "date");
         }
     }
 
     protected function validateRegex($field, $value, $param)
     {
         if (@preg_match($param, '') === false) {
-            $this->addError($field, "Invalid regex pattern.");
+            $this->addError($field, "Invalid regex pattern.", "regex");
             return;
         }
 
         if (!preg_match($param, $value)) {
-            $this->addError($field, "The :attribute format is invalid.");
+            $this->addError($field, "The :attribute format is invalid.", "regex");
         }
     }
 
@@ -181,7 +214,7 @@ class Validator
 		$count = $stmt->fetchColumn();
 	
 		if ($count > 0) {
-			$this->addError($field, "The :attribute must be unique.");
+			$this->addError($field, "The :attribute must be unique.", "unique");
 		}
 	}
 
@@ -228,14 +261,14 @@ class Validator
 		$count = $stmt->fetchColumn();
 	
 		if ($count === 0) {
-			$this->addError($field, "The :attribute does not exist.");
+			$this->addError($field, "The :attribute does not exist.", "exists");
 		}
 	}
 
 	protected function validateConfirm($field, $value, $param) {
 		// Check if the field to confirm is present in the data
 		if (!isset($this->data[$param]) || $value !== $this->data[$param]) {
-			$this->addError($field, "The :attribute must match {$param}.");
+			$this->addError($field, "The :attribute must match {$param}.", "confirm");
 		}
 	}
 	
@@ -244,7 +277,7 @@ class Validator
         $allowedTypes = explode(',', $param);
 
         if (isset($file['tmp_name']) && !in_array(mime_content_type($file['tmp_name']), $allowedTypes)) {
-            $this->addError($field, "The :attribute must be one of: " . implode(', ', $allowedTypes) . ".");
+            $this->addError($field, "The :attribute must be one of: " . implode(', ', $allowedTypes) . ".", "file_type");
         }
     }
 
@@ -253,14 +286,31 @@ class Validator
 		$maxSize = (int)$param * 1024; // Convert kilobytes (KB) to bytes
 
 		if (isset($file['size']) && $file['size'] > $maxSize) {
-			$this->addError($field, "The :attribute size must be less than " . ($param / 1024) . " MB.");
+			$this->addError($field, "The :attribute size must be less than " . ($param / 1024) . " MB.", "file_size");
 		}
 	}
 
-    protected function addError($field, $message)
+    // protected function addError($field, $message)
+    // {
+    //     $displayName = $this->customFieldNames[$field] ?? $field;
+    //     $message = str_replace(":attribute", $displayName, $message);
+    //     $this->errors[$field][] = $message;
+    // }
+
+    protected function addError($field, $message, $rule = null)
     {
+        // Check for field-rule-specific message
+        if ($rule && isset($this->customMessages[$field][$rule])) {
+            $message = $this->customMessages[$field][$rule];
+        }
+        // Check for a general rule-based custom message
+        elseif ($rule && isset($this->customMessages[$rule])) {
+            $message = $this->customMessages[$rule];
+        }
+
         $displayName = $this->customFieldNames[$field] ?? $field;
         $message = str_replace(":attribute", $displayName, $message);
+
         $this->errors[$field][] = $message;
     }
 
