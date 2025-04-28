@@ -68,26 +68,26 @@ class Router {
         // error_log("Normalized URI: $normalizedUri");
     
         // Validate JSON payload for non-GET requests
-        if ($method !== 'GET') {
-            $rawInput = file_get_contents('php://input');
-            $jsonInput = json_decode($rawInput, true);
+        // if ($method !== 'GET') {
+        //     $rawInput = file_get_contents('php://input');
+        //     $jsonInput = json_decode($rawInput, true);
     
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                Response::json([
-                    'error' => 'Invalid request payload',
-                ], 400);
-                exit;
-            }
+        //     if (json_last_error() !== JSON_ERROR_NONE) {
+        //         Response::json([
+        //             'error' => 'Invalid request payload',
+        //         ], 400);
+        //         exit;
+        //     }
     
-            // Validate CSRF token
-            $csrfToken = $jsonInput['csrf_token'] ?? $_POST['csrf_token'] ?? null;
-            if (!$csrfToken || !Csrf::validateToken($csrfToken)) {
-                Response::json([
-                    'error' => 'CSRF token mismatch or missing',
-                ], 403);
-                exit;
-            }
-        }
+        //     // Validate CSRF token
+        //     $csrfToken = $jsonInput['csrf_token'] ?? $_POST['csrf_token'] ?? null;
+        //     if (!$csrfToken || !Csrf::validateToken($csrfToken)) {
+        //         Response::json([
+        //             'error' => 'CSRF token mismatch or missing',
+        //         ], 403);
+        //         exit;
+        //     }
+        // }
     
         foreach (self::$routes as $route) {
             // Check for dynamic matching using regex

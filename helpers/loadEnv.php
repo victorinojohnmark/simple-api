@@ -21,7 +21,7 @@ function loadEnv($filePath) {
 }
 
 function validateEnv() {
-    if (!getenv('DB_HOST') || !getenv('DB_NAME') || !getenv('DB_USER') || !getenv('DB_PASS')) {
+    if (!getenv('DB_HOST') || !getenv('DB_NAME') || !getenv('DB_USER') || !getenv('DB_PASS') || !getenv('JWT_SECRET_KEY')) {
         die(json_encode([
             'status' => 'error',
             'message' => 'Missing required environment variables. Please check your .env file.'

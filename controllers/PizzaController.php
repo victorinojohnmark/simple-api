@@ -35,40 +35,36 @@ class PizzaController extends Controller {
 
     public function createPizza() {
         $data = $this->requestData;
-
-        // // Initialize File handler
+    
+        // Initialize File handler (if needed)
         // $fileHandler = new File(UPLOAD_DIR); // Use the directory from config.php
-
-        // // Handle file upload
         // if (isset($_FILES['image'])) {
         //     $uploadedFilePath = $fileHandler->upload($_FILES['image'], 'image');
-
         //     if ($uploadedFilePath) {
         //         $data['image_path'] = $uploadedFilePath; // Save the file path in the data array
         //     } else {
-        //         // Handle file upload error
-        //         Response::json([
-        //             'error' => 'Failed to upload file',
-        //         ], 500);
+        //         Response::json(['error' => 'Failed to upload file'], 500);
         //         return;
         //     }
         // }
-
-        // validate
+    
+        // Validation rules
         $validator = new Validator($data, [
             'name' => 'required|string|max:255|unique:pizzas,name',
             'description' => 'string|max:1000',
             'price' => 'required|numeric|min:0',
         ]);
-
+    
         $validator->setCustomMessages([
             'name.unique' => 'Existing na ung pizza.',
         ]);
-
+    
+        // Add additional fields
         $data['created_at'] = time();
-        $data['created_by'] = $_SESSION['user_id'];
-
-        if($validator->passes()) {
+        $data['created_by'] = $_REQUEST['user_id']; // Use user ID from the JWT payload
+    
+        if ($validator->passes()) {
+            // Create the pizza
             $pizza = PizzaModel::createPizza($data);
             Response::json([
                 'success' => true,
@@ -81,10 +77,7 @@ class PizzaController extends Controller {
                 'message' => 'Validation failed. Please review the errors and try again.',
                 'errors' => $validator->errors()
             ], 422);
-            return;
         }
-
-       
     }
 
     public function updatePizza($pizzaId) {

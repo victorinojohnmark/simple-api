@@ -1,4 +1,6 @@
 RewriteEngine On
+RewriteCond %{HTTP:Authorization} ^(.*)
+RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]
 
 # Redirect all requests to index.php, except static files (CSS, JS, Images)
 RewriteCond %{REQUEST_FILENAME} !-f
