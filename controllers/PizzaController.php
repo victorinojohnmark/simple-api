@@ -61,6 +61,10 @@ class PizzaController extends Controller {
             'price' => 'required|numeric|min:0',
         ]);
 
+        $validator->setCustomMessages([
+            'name.unique' => 'Existing na ung pizza.',
+        ]);
+
         $data['created_at'] = time();
         $data['created_by'] = $_SESSION['user_id'];
 
@@ -68,13 +72,13 @@ class PizzaController extends Controller {
             $pizza = PizzaModel::createPizza($data);
             Response::json([
                 'success' => true,
-                'message' => 'Pizza created',
+                'message' => 'Pizza created successfully',
                 'data' => $pizza,
             ]);
         } else {
             Response::json([
                 'success' => false,
-                'message' => 'Validation failed',
+                'message' => 'Validation failed. Please review the errors and try again.',
                 'errors' => $validator->errors()
             ], 422);
             return;

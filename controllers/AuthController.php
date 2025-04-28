@@ -22,6 +22,7 @@ class AuthController extends Controller {
 
 			Response::json([
 				'success' => false,
+				'message' => 'Validation failed. Please review the errors and try again.',
 				'errors' => $validator->errors()
 			], 422);
 			return;
